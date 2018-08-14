@@ -20,7 +20,7 @@ library
   exposed-modules:     Servant.Prometheus
   hs-source-dirs:      lib
   build-depends:       base >= 4.7 && < 4.11
-                     , prometheus-client
+                     , prometheus-client <= 0.3.0
                      , servant > 0.10 && < 0.14
                      , http-types
                      , text
