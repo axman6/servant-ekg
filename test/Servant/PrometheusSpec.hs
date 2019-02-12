@@ -21,7 +21,12 @@ import           Network.HTTP.Client                        (defaultManagerSetti
 import           Network.Wai
 import           Network.Wai.Handler.Warp
 import           Servant
+#if MIN_VERSION_servant(0,15,0)
+import           Servant.Test.ComprehensiveAPI              (comprehensiveAPI)
+#else
 import           Servant.API.Internal.Test.ComprehensiveAPI (comprehensiveAPI)
+#endif
+
 import           Servant.Client
 import           Test.Hspec
 
@@ -41,11 +46,7 @@ spec = describe "servant-prometheus" $ do
           withApp q $ \port m -> do
             mgr <- newManager defaultManagerSettings
             let runFn :: ClientM a -> IO (Either ServantError a)
-#if MIN_VERSION_servant_client(0,13,0)
-                env = ClientEnv mgr (BaseUrl Http "localhost" port "") Nothing
-#else
-                env = ClientEnv mgr (BaseUrl Http "localhost" port "")
-#endif
+                env = mkClientEnv mgr (BaseUrl Http "localhost" port "")
                 runFn fn = runClientM fn env
             _ <- runFn $ getEp "name" Nothing
             _ <- runFn $ postEp (Greet "hi")
@@ -53,17 +54,17 @@ spec = describe "servant-prometheus" $ do
             case H.lookup "hello.:name.GET" m of
               Nothing -> fail "Expected some value"
               Just v -> do
-                r <- getVectorWith getCounter (metersResponses v)
+                r <- getVectorWith (metersResponses v) getCounter
                 Prelude.lookup "2XX" r `shouldBe` Just 1.0
             case H.lookup "greet.POST" m of
               Nothing -> fail "Expected some value"
               Just v  -> do
-                r <- getVectorWith getCounter (metersResponses v)
+                r <- getVectorWith (metersResponses v) getCounter
                 Prelude.lookup "2XX" r `shouldBe` Just 1.0
             case H.lookup "greet.:greetid.DELETE" m of
               Nothing -> fail "Expected some value"
               Just v  -> do
-                r <- getVectorWith getCounter (metersResponses v)
+                r <- getVectorWith (metersResponses v) getCounter
                 Prelude.lookup "2XX" r `shouldBe` Just 1.0
         it "has all endpoints" $
           withApp q $ \_ m ->
@@ -75,6 +76,7 @@ spec = describe "servant-prometheus" $ do
 
   t NoQuantiles
   t WithQuantiles
+
   it "is comprehensive" $ do
     let _typeLevelTest = monitorServant comprehensiveAPI undefined undefined undefined
     True `shouldBe` True

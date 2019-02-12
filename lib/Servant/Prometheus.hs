@@ -104,7 +104,7 @@ monitorServant
     => Proxy api
     -> H.HashMap Text Meters
     -> Middleware
-monitorServant proxy ms application = \request respond -> do
+monitorServant proxy ms application request respond = do
     let path = case getEndpoint proxy request of
             Nothing -> "unknown"
             Just (ps,method) -> T.intercalate "." $ ps <> [T.decodeUtf8 method]
@@ -150,20 +150,9 @@ instance (KnownSymbol (path :: Symbol), HasEndpoints (sub :: *))
             _ -> Nothing
 
 
-#if MIN_VERSION_servant(0,13,0)
-#define CAPTURE Capture' mods
-#define HEADER Header' mods
-#define QUERY_PARAM QueryParam' mods
-#define REQ_BODY ReqBody' mods
-#else
-#define CAPTURE Capture
-#define HEADER Header
-#define QUERY_PARAM QueryParam
-#define REQ_BODY ReqBody
-#endif
 
 instance (KnownSymbol (capture :: Symbol), HasEndpoints (sub :: *))
-    => HasEndpoints (CAPTURE capture a :> sub) where
+    => HasEndpoints (Capture' mods capture a :> sub) where
     getEndpoints _ = do
         (end, method) <- getEndpoints (Proxy :: Proxy sub)
         let p = T.pack $ (':':) $ symbolVal (Proxy :: Proxy capture)
@@ -184,11 +173,11 @@ instance HasEndpoints (sub :: *) => HasEndpoints (BasicAuth r a :> sub) where
     getEndpoints _ = getEndpoints (Proxy :: Proxy sub)
     getEndpoint _ = getEndpoint (Proxy :: Proxy sub)
 
-instance HasEndpoints (sub :: *) => HasEndpoints (HEADER h a :> sub) where
+instance HasEndpoints (sub :: *) => HasEndpoints (Header' mods h a :> sub) where
     getEndpoints _ = getEndpoints (Proxy :: Proxy sub)
     getEndpoint _ = getEndpoint (Proxy :: Proxy sub)
 
-instance HasEndpoints (sub :: *) => HasEndpoints (QUERY_PARAM (h :: Symbol) a :> sub) where
+instance HasEndpoints (sub :: *) => HasEndpoints (QueryParam' mods (h :: Symbol) a :> sub) where
     getEndpoints _ = getEndpoints (Proxy :: Proxy sub)
     getEndpoint _ = getEndpoint (Proxy :: Proxy sub)
 
@@ -200,7 +189,7 @@ instance HasEndpoints (sub :: *) => HasEndpoints (QueryFlag h :> sub) where
     getEndpoints _ = getEndpoints (Proxy :: Proxy sub)
     getEndpoint _ = getEndpoint (Proxy :: Proxy sub)
 
-instance HasEndpoints (sub :: *) => HasEndpoints (REQ_BODY cts a :> sub) where
+instance HasEndpoints (sub :: *) => HasEndpoints (ReqBody' mods cts a :> sub) where
     getEndpoints _ = getEndpoints (Proxy :: Proxy sub)
     getEndpoint _ = getEndpoint (Proxy :: Proxy sub)
 
@@ -229,8 +218,17 @@ instance ReflectMethod method => HasEndpoints (Verb method status cts a) where
       where method = reflectMethod (Proxy :: Proxy method)
     getEndpoint _ req = case pathInfo req of
         [] | requestMethod req == method -> Just ([], method)
-        _  -> Nothing
+        _                                -> Nothing
       where method = reflectMethod (Proxy :: Proxy method)
+
+instance ReflectMethod method => HasEndpoints (Stream method status framing ct a) where
+    getEndpoints _ = [([], method)]
+      where method = reflectMethod (Proxy :: Proxy method)
+    getEndpoint _ req = case pathInfo req of
+        [] | requestMethod req == method -> Just ([], method)
+        _                                -> Nothing
+      where method = reflectMethod (Proxy :: Proxy method)
+
 instance HasEndpoints Raw where
     getEndpoints _ = pure ([],"RAW")
     getEndpoint _ _ = Just ([],"RAW")
@@ -239,18 +237,20 @@ instance HasEndpoints EmptyAPI where
     getEndpoints _ = pure ([],"EmptyAPI")
     getEndpoint _ _ = Just ([],"EmptyAPI")
 
-#if MIN_VERSION_servant(0,8,1)
 instance HasEndpoints (sub :: *) => HasEndpoints (CaptureAll (h :: Symbol) a :> sub) where
     getEndpoints _ = getEndpoints (Proxy :: Proxy sub)
     getEndpoint _ = getEndpoint (Proxy :: Proxy sub)
-#endif
 
-#if MIN_VERSION_servant(0,13,0)
 instance HasEndpoints (sub :: *) => HasEndpoints (Servant.Description s :> sub) where
     getEndpoints _ = getEndpoints (Proxy :: Proxy sub)
     getEndpoint _ = getEndpoint (Proxy :: Proxy sub)
 
 instance HasEndpoints (sub :: *) => HasEndpoints (Servant.Summary s :> sub) where
+    getEndpoints _ = getEndpoints (Proxy :: Proxy sub)
+    getEndpoint _ = getEndpoint (Proxy :: Proxy sub)
+
+#if MIN_VERSION_servant(0,15,0)
+instance HasEndpoints (sub :: *) => HasEndpoints (StreamBody' mods framing ct a :> sub) where
     getEndpoints _ = getEndpoints (Proxy :: Proxy sub)
     getEndpoint _ = getEndpoint (Proxy :: Proxy sub)
 #endif

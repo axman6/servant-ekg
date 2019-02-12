@@ -1,5 +1,5 @@
 name:                servant-prometheus
-version:             0.1.0.0
+version:             0.2.0.0
 synopsis:            Helpers for using prometheus with servant
 description:         Helpers for using prometheus with servant. Each endpoint has its own metrics allowing more detailed monitoring than wai-middleware-prometheus allows
 license:             BSD3
@@ -19,15 +19,18 @@ source-repository HEAD
 library
   exposed-modules:     Servant.Prometheus
   hs-source-dirs:      lib
-  build-depends:       base >= 4.7 && < 4.12
-                     , prometheus-client >= 1.0
-                     , servant > 0.10 && < 0.14
-                     , http-types
-                     , text
-                     , time
-                     , unordered-containers
-                     , wai
-                     , bytestring
+  build-depends:      base                  >= 4.7      && < 4.13
+                    , prometheus-client     >= 1.0
+                    , servant               >= 0.14     && < 0.16
+                    , ekg-core              >= 0.1.1.4  && <0.2
+                    , http-types            >= 0.12.2   && <0.13
+                    , servant               >= 0.14     && <0.16
+                    , text                  >= 1.2.3.0  && <1.3
+                    , time                  >= 1.6.0.1  && <1.9
+                    , unordered-containers  >= 0.2.9.0  && <0.3
+                    , wai                   >= 3.2.0    && <3.3
+                    , bytestring
+
   default-language:    Haskell2010
 
 test-suite spec
